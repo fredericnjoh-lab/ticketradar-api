@@ -1,5 +1,5 @@
 """
-TicketRadar — API de scraping v4 + Bot Telegram
+TicketRadar — API de scraping v4.1 + Bot Telegram
 """
 
 import os
@@ -156,7 +156,7 @@ async def root():
         "version": "4.0",
         "status": "online",
         "telegram": "configured" if TELEGRAM_TOKEN else "not configured",
-        "endpoints": ["/prices", "/prices/{event_name}", "/health", "/alert/test", "/alert/scan"]
+        "endpoints":["/prices", "/prices/{event_name}", "/health", "/alert/test", "/alert/notify"]
     }
 
 @app.get("/health")
@@ -210,7 +210,15 @@ async def alert_scan(seuil: int = 30, sheet_url: str = ""):
         }
     except Exception as e:
         return {"error": str(e)}
-
+        
+@app.post("/alert/notify")
+async def alert_notify(payload: dict):
+    events = payload.get("events", [])
+    seuil = payload.get("seuil", 30)
+    if not events:
+        return {"error": "Aucun event reçu"}
+    alerts_sent = await check_and_alert(events, seuil)
+    return {"events_scanned": len(events), "alerts_sent": alerts_sent, "seuil": seuil, "timestamp": datetime.now().isoformat()}
 @app.get("/prices")
 async def get_all_prices():
     cache_key = "all_prices"
